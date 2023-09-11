@@ -1,5 +1,7 @@
 const rabbitMQ = {
-    uri: "amqp://localhost"
+    url: "amqps://localhost",
+    exchangeName: "newExchange",
+    exchangeType: "direct"
 }
 
 export default rabbitMQ;

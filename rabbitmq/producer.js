@@ -1,32 +1,22 @@
-import amqp from 'amqplib/callback_api.js';
+import amqp from 'amqplib';
+import rabbitMQ from '../config.js';
 
 class Producer {
     constructor() {
         this.channel = null;
         this.exchangeName = null;
+        this.url = rabbitMQ.url
     }
 
-    async start(uri, exchangName, exchangeType) {
-
-        //connect
-        amqp.connect(uri, (err, connection) => {
-            if (err) {
-                throw err;
-            }
-            connection.createChannel((err, channel) => {
-                if (err) {
-                    throw err;
-                }
-                channel.assertExchange(exchangName, exchangeType);
-                this.channel = channel
-            });
-        });
-
-        //create exchange
+    async start(exchangName, exchangeType) {
+        this.exchangeName = exchangName
+        const connection = await amqp.connect(this.url);
+        this.channel = await connection.createChannel()
+        await this.channel.assertExchange(exchangName, exchangeType);
     }
 
-    async publishMessage(routingKey, message) {
-        await this.channel.publish(this.exchangeName, routingKey, Buffer.from(JSON.stringify(
+    publishMessage(routingKey, message) {
+        this.channel.publish(this.exchangeName, routingKey, Buffer.from(JSON.stringify(
             {
                 message: message,
                 date: Date.now()

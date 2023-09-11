@@ -1,28 +1,29 @@
-import * as amqp from 'amqplib/callback_api.js'
+import amqp from 'amqplib'
+import rabbitMQ from '../config.js';
 
 class Consumer{
     constructor() {
-        this.channel = null;
-        this.exchangName = null;
+        this.channel;
+        this.exchangName = rabbitMQ.exchangeName;
+        this.exchangType = rabbitMQ.exchangeType;
+        this.url = rabbitMQ.url;
     }
-
-    async start (uri, exchangName, exchangeType) {
-        this.exchangName = exchangName;
-        //connect
-        amqp.connect(uri, (err, connection)=>{
-            this.channel = connection.createChannel()
-            this.channel.assertExchange(exchangName, exchangeType);
-        })
+    
+    async start () {
+        const connection = await amqp.connect(this.url);
+        this.channel =  await connection.createChannel();
+        await this.channel.assertExchange(this.exchangName, this.exchangeType)
     }
 
     async createQueue (queueName, routingKey) {
-        const queue = await this.assertQueue(queueName);
-        await this.channel.bindQueue(queue, this.exchangName, routingKey);
-    }
-
-    async assertQueue (queueName) {
-        const q = await this.channel.assertQueue(queueName);
-        return q.queue;
+        if (!this.channel) {
+            console.log("consumer channel created.");
+            await this.start();
+        }
+        const q = await this.channel.assertQueue(queueName, {durable: false});
+        await this.channel.bindQueue(q.queue, this.exchangName, routingKey)
+        console.log("queue created");
+        return q;
     }
  }
 
